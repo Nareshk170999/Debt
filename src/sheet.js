@@ -158,9 +158,7 @@ export function buildModel(sheets) {
   const income = parseIncome(aoa)
   let baseIncome = isFinite(income.total) ? income.total
     : (monthly.length ? monthly[0].income : NaN)
-  const subtitle = income.people.length
-    ? `Income ${fmtINR(income.total)}/mo · ${income.people.map(p => `${p.name} ${fmtINR(p.amount)}`).join(' + ')}`
-    : (isFinite(baseIncome) ? `Income ${fmtINR(baseIncome)}/mo` : '')
+  const subtitle = isFinite(baseIncome) ? `Income ${fmtINR(baseIncome)} / month` : ''
 
   // closure events extracted from the Monthly View "Events" column
   const events = []

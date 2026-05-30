@@ -117,14 +117,17 @@ export default function App() {
   return (
     <div className="app">
       <header className="head">
-        <div>
+        <div className="head-main">
           <div className="eyebrow">family debt payoff · live</div>
           <h1>{DASHBOARD_TITLE.split(' ')[0]} <em>{DASHBOARD_TITLE.split(' ').slice(1).join(' ')}</em></h1>
-          {model?.subtitle && <div className="subtitle">{model.subtitle}</div>}
-          {updated && <div className="updated">Updated {updated.toLocaleTimeString()}{model?.sheetAsOf ? ` · sheet baseline ${model.sheetAsOf}` : ''}</div>}
+          {model?.subtitle && <span className="income-pill">{model.subtitle}</span>}
         </div>
         <div className="head-actions">
-          <button className="refresh" onClick={load}>↻ Refresh</button>
+          <LiveClock />
+          <div className="head-buttons">
+            <button className="refresh" onClick={load}>↻ Refresh</button>
+            {updated && <span className="updated">synced {updated.toLocaleTimeString()}</span>}
+          </div>
         </div>
       </header>
 
@@ -416,6 +419,22 @@ export default function App() {
     const lo = model.months[0].key, hi = model.months.at(-1).key
     setAsOf(Math.min(hi, Math.max(lo, todayKey())))
   }
+}
+
+function LiveClock() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const date = now.toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+  const time = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  return (
+    <div className="clock" title={now.toString()}>
+      <span className="clock-time">{time}</span>
+      <span className="clock-date">{date}</span>
+    </div>
+  )
 }
 
 function Kpi({ label, value, sub, accent, tone }) {

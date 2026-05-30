@@ -1,0 +1,5 @@
+# Tells Cloudflare/Wrangler to deploy ONLY the proxy worker, not the Vite app.
+# Without this, Wrangler auto-detects Vite and fails ("needs Vite >= 6.0.0").
+name = "v1"
+main = "cloudflare-worker.js"
+compatibility_date = "2024-11-01"

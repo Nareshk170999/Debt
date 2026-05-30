@@ -14,9 +14,15 @@ body{
 .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
 h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(26px,3.6vw,38px);letter-spacing:-.01em;line-height:1.04}
 h1 em{font-style:italic;color:var(--accent)}
-.subtitle{color:var(--muted);font-size:13px;margin-top:8px;max-width:680px;line-height:1.5}
-.updated{color:var(--faint);font-size:12px;margin-top:6px;font-family:'IBM Plex Mono',monospace}
-.head-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.income-pill{display:inline-block;margin-top:11px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--accent);background:rgba(240,180,41,.08);border:1px solid rgba(240,180,41,.28);padding:5px 12px;border-radius:999px}
+.updated{color:var(--faint);font-size:11px;font-family:'IBM Plex Mono',monospace}
+.head-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.head-buttons{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+
+/* live clock */
+.clock{display:flex;flex-direction:column;align-items:flex-end;padding-right:16px;border-right:1px solid var(--line)}
+.clock-time{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:var(--text);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.clock-date{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.14em;margin-top:3px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tab{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;transition:.15s}
 .tab:hover{color:var(--text)}
@@ -187,3 +193,66 @@ td.strong{color:#fff;font-weight:600}
 .tip-n{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:7px;background:var(--accent);color:#1a1304;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600}
 .tips li.urgent .tip-n{background:var(--danger);color:#2a0808}
 .tip-detail{margin-top:7px;font-size:12.5px;color:var(--muted);line-height:1.6}
+
+/* ============================================================
+   RESPONSIVE — phones, tablets, all devices
+   ============================================================ */
+
+/* tablets */
+@media(max-width:820px){
+  .charts{grid-template-columns:1fr}
+  .head-actions{width:100%;justify-content:space-between}
+}
+
+/* phones */
+@media(max-width:600px){
+  .app{padding:18px 14px 48px}
+  .head{align-items:flex-start;gap:14px;margin-bottom:18px}
+  .head-main{width:100%}
+  .head-actions{gap:12px}
+  .clock{padding-right:12px}
+  .clock-time{font-size:18px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .kpi{padding:13px 14px;border-radius:12px}
+  .kpi-value{font-size:23px}
+  .charts{gap:12px;margin-bottom:14px}
+  .card{padding:13px 12px 14px;border-radius:12px}
+  .card-title{font-size:11.5px;margin-bottom:10px}
+  .scrubber{padding:14px 14px}
+  .scrub-month{font-size:24px}
+  .scrub-meta{font-size:11px;gap:12px}
+  .scrub-meta b{font-size:14px}
+  .panel{padding:15px 15px}
+  .section-title{font-size:18px}
+  /* tables scroll horizontally, with tighter cells */
+  table{font-size:12.5px}
+  thead th,tbody td{padding:9px 11px}
+  .note-cell{max-width:200px}
+  td.loan-name{max-width:150px}
+}
+
+/* small phones */
+@media(max-width:430px){
+  h1{font-size:25px}
+  .kpis{grid-template-columns:1fr 1fr;gap:9px}
+  .kpi-value{font-size:21px}
+  .kpi-label{font-size:11px}
+  .clock-time{font-size:16px}
+  .clock-date{font-size:9.5px;letter-spacing:.08em}
+  .scrub-meta{width:100%}
+  .income-pill{font-size:11.5px}
+  .refresh{padding:8px 12px;font-size:12.5px}
+}
+
+/* avoid sideways page scroll on tiny screens */
+@media(max-width:600px){
+  .table-shell{max-height:70vh}
+  .exp-row{grid-template-columns:96px 1fr 84px}
+}
+
+/* nicer touch targets on coarse pointers (mobile/tablet) */
+@media(pointer:coarse){
+  .scrub-range::-webkit-slider-thumb{width:24px;height:24px}
+  .step{width:38px;height:38px}
+  thead th{padding-top:14px;padding-bottom:14px}
+}
