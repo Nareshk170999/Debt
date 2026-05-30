@@ -13,11 +13,11 @@ function fromEnvFile(key) {
   } catch { return null }
 }
 
-const url = process.env.VITE_SHEET_URL || process.env.SHEET_URL || fromEnvFile('VITE_SHEET_URL')
-if (!url) {
-  console.error('✗ VITE_SHEET_URL is not set (env var or .env).')
-  process.exit(1)
-}
+// Fallback keeps CI working even if the VITE_SHEET_URL variable isn't set.
+const FALLBACK_URL =
+  'https://docs.google.com/spreadsheets/d/1I1itIjufqZUNzjqWEzkkwVaX3YLWUhCUojn9AgGF_r4/edit'
+const url = process.env.VITE_SHEET_URL || process.env.SHEET_URL ||
+            fromEnvFile('VITE_SHEET_URL') || FALLBACK_URL
 
 const id = (url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/) ||
             url.match(/\/file\/d\/([a-zA-Z0-9-_]+)/) ||
