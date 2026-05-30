@@ -357,22 +357,29 @@ export default function App() {
           </section>
 
           {model.goldLoans.length > 0 && (() => {
-            const g = model.goldLoans
+            const todayDay = Math.floor(Date.now() / 86400000)
+            // days held + interest accrued from "date of kept" until today
+            const g = model.goldLoans.map(x => {
+              const days = isFinite(x.keptTs) ? Math.max(0, todayDay - Math.floor(x.keptTs / 86400000)) : NaN
+              const perDay = isFinite(x.interestToPay) ? x.interestToPay / 30
+                : (isFinite(x.amount) && isFinite(x.interest) ? x.amount * x.interest / 100 / 365 : NaN)
+              const accrued = isFinite(perDay) && isFinite(days) ? perDay * days : NaN
+              return { ...x, days, accrued }
+            })
             const total = g.reduce((a, x) => a + x.amount, 0)
             const grams = g.reduce((a, x) => a + x.gram, 0)
             const interestDue = g.reduce((a, x) => a + (isFinite(x.interestToPay) ? x.interestToPay : 0), 0)
-            const rates = g.filter(x => isFinite(x.interest) && x.interest > 0).map(x => x.interest)
-            const avgRate = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : NaN
+            const accruedTotal = g.reduce((a, x) => a + (isFinite(x.accrued) ? x.accrued : 0), 0)
             return (
               <section className="gold-block">
                 <h2 className="section-title">Gold loans
                   <span className="muted-sub">{g.length} pledge{g.length > 1 ? 's' : ''} · {new Set(g.map(x => x.bank)).size} bank(s)</span>
                 </h2>
                 <section className="kpis gold-kpis">
-                  <Kpi label="Total pledged" value={fmtINR(total)} sub="borrowed against gold" accent />
-                  <Kpi label="Gold pledged" value={`${grams} g`} sub={grams ? `${fmtINR(total / grams)} / g` : ''} />
+                  <Kpi label="Total pledged" value={fmtINR(total)} sub={grams ? `${grams} g · ${fmtINR(total / grams)}/g` : 'against gold'} accent />
                   <Kpi label="Interest / month" value={fmtINR(interestDue)} sub={`₹${Math.round(interestDue * 12).toLocaleString('en-IN')} / yr`} tone="neg" />
-                  <Kpi label="Avg interest" value={isFinite(avgRate) ? `${avgRate}%` : '—'} sub="rate" />
+                  <Kpi label="Interest till today" value={fmtINR(accruedTotal)} sub="accrued since kept" tone="neg" />
+                  <Kpi label="Payoff today" value={fmtINR(total + accruedTotal)} sub="principal + interest" />
                 </section>
                 <div className="gold-grid">
                   {g.map((x, i) => (
@@ -384,9 +391,9 @@ export default function App() {
                       <div className="gold-amt">{fmtINR(x.amount)}</div>
                       <div className="gold-meta">
                         <span><i>Holder</i>{x.holder || '—'}</span>
-                        <span><i>Interest</i>{isFinite(x.interest) ? `${x.interest}%` : '—'}</span>
-                        <span><i>Interest / mo</i>{isFinite(x.interestToPay) ? fmtINR(x.interestToPay) : '—'}</span>
-                        <span><i>Kept</i>{x.date || '—'}</span>
+                        <span><i>Rate</i>{isFinite(x.interest) ? `${x.interest}% · ${fmtINR(x.interestToPay)}/mo` : '—'}</span>
+                        <span><i>Kept</i>{x.date || '—'}{isFinite(x.days) ? ` · ${x.days}d ago` : ''}</span>
+                        <span className="gold-accrued"><i>Interest till today</i><b>{isFinite(x.accrued) ? fmtINR(x.accrued) : '—'}</b></span>
                       </div>
                     </div>
                   ))}

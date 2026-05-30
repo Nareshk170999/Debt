@@ -9,15 +9,25 @@ export function extractId(url) {
   return m ? m[1] : null
 }
 
-// Fetch the workbook through the dev-server proxy and return raw rows per sheet.
+// Fetch the workbook and return raw rows per sheet.
+//   • dev      → through the Vite dev-server proxy (live, server-side fetch)
+//   • prod     → a static data.xlsx baked at build time by the GitHub Action
+//                (GitHub Pages has no server, so the CORS-bound Google fetch
+//                 happens in CI instead of the browser)
 export async function fetchWorkbook(url) {
-  const id = extractId(url)
-  if (!id) throw new Error('Could not find a spreadsheet id in that URL.')
-
-  const res = await fetch(`/api/sheet?id=${encodeURIComponent(id)}`)
+  let res
+  if (import.meta.env.DEV) {
+    const id = extractId(url)
+    if (!id) throw new Error('Could not find a spreadsheet id in that URL.')
+    res = await fetch(`/api/sheet?id=${encodeURIComponent(id)}`)
+  } else {
+    res = await fetch(`${import.meta.env.BASE_URL}data.xlsx`, { cache: 'no-store' })
+  }
   if (!res.ok) {
     let msg = `Request failed (${res.status}).`
     try { const j = await res.json(); if (j.error) msg = j.error } catch {}
+    if (!import.meta.env.DEV && res.status === 404)
+      msg = 'data.xlsx not found — the GitHub Action needs to run to bake the sheet into the site.'
     throw new Error(msg)
   }
   const buf = await res.arrayBuffer()
@@ -242,12 +252,14 @@ function parseGold(aoa) {
     const r = aoa[i]
     const bank = clean(r[2]), amount = num(r[4]), gram = num(r[0])
     if (!bank && !isFinite(amount) && !isFinite(gram)) continue
+    const kept = toDate(r[5])
     out.push({
       gram: isFinite(gram) ? gram : 0,
       interest: num(r[1]),
       bank, holder: clean(r[3]),
       amount: isFinite(amount) ? amount : 0,
-      date: fmtDate(toDate(r[5])),
+      date: fmtDate(kept),
+      keptTs: kept ? normDay(kept).getTime() : NaN,
       interestToPay: num(r[6]),
     })
   }

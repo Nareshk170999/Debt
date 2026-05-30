@@ -42,34 +42,44 @@ small dev-server middleware (`/api/sheet` in `vite.config.js`) that fetches the
 file **server-side** following redirects, then streams the `.xlsx` bytes back to
 the page as same-origin. SheetJS parses it in the browser.
 
-## 3. Deploy free (GitHub + Vercel)
+## 3. Deploy free on GitHub Pages
 
-GitHub Pages can't host this (it's static-only and can't run the `/api/sheet`
-proxy). Use **Vercel's free tier**, which runs the proxy as a serverless
-function (`api/sheet.js`) and auto-deploys on every push.
+GitHub Pages is static-only, so the browser can't fetch Google directly (CORS).
+Instead, a **GitHub Action fetches the sheet during the build** (server-side, no
+CORS), bakes it into the site as `data.xlsx`, and publishes to Pages. A schedule
+re-runs it hourly so the data stays fresh. The whole flow is in
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+**One-time setup:**
 
 ```bash
-# one-time: put the repo on GitHub
 git init
 git add -A
 git commit -m "Sheet dashboard"
 git branch -M main
-git remote add origin https://github.com/<you>/sheet-dashboard.git
+git remote add origin https://github.com/<you>/<repo>.git
 git push -u origin main
 ```
 
-Then on https://vercel.com:
-1. **Add New → Project → Import** your GitHub repo (Vercel auto-detects Vite).
-2. **Settings → Environment Variables**, add `VITE_SHEET_URL` (and optionally
-   `VITE_DASHBOARD_TITLE`) — because `.env` is git-ignored.
-3. **Deploy.** You get a free `https://<project>.vercel.app` URL. Every
-   `git push` redeploys automatically.
+Then in the GitHub repo:
+1. **Settings → Secrets and variables → Actions → Variables → New variable**
+   - `VITE_SHEET_URL` = your spreadsheet link (required)
+   - `VITE_DASHBOARD_TITLE`, `VITE_REFRESH_SECONDS` (optional)
+2. **Settings → Pages → Build and deployment → Source = GitHub Actions**.
+3. Push to `main` (or run the workflow from the **Actions** tab). Your site goes
+   live at `https://<you>.github.io/<repo>/`.
 
-> Netlify works the same way; move `api/sheet.js` to
-> `netlify/functions/sheet.js` and add a `/api/sheet → /.netlify/functions/sheet`
-> redirect.
+The sheet refreshes on every push, hourly via cron, or on-demand via
+**Actions → Deploy to GitHub Pages → Run workflow**.
+
+### Build a static copy locally
+```bash
+npm run build:static   # downloads the sheet, then builds into dist/
+npm run preview
+```
 
 ## Notes
 - Set `VITE_REFRESH_SECONDS` in `.env` for auto-refresh.
-- `/api/sheet` is served by Vite middleware in dev and by `api/sheet.js`
-  (serverless) in production — both fetch the file server-side to dodge CORS.
+- Data source: in **dev** the Vite middleware proxies Google live; in
+  **production** the app loads the `data.xlsx` baked by the Action. Both avoid
+  the browser CORS block by fetching server-side.

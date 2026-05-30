@@ -43,6 +43,9 @@ function sheetProxy() {
 }
 
 export default defineConfig({
+  // Relative base so the build works whether it's served from the domain root
+  // or from a GitHub Pages project path like /<repo>/.
+  base: './',
   plugins: [react(), sheetProxy()],
   server: { port: 5173, open: true }
 })

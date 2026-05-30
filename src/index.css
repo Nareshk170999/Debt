@@ -153,6 +153,8 @@ td.empty{padding:24px;color:var(--faint);text-align:center;font-family:'Albert S
 .gold-meta{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--text)}
 .gold-meta span{display:flex;justify-content:space-between;gap:10px}
 .gold-meta i{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.gold-accrued{margin-top:4px;padding-top:8px;border-top:1px solid rgba(240,180,41,.2)}
+.gold-accrued b{color:var(--danger);font-weight:600}
 
 /* loan table extras */
 td.loan-name{font-family:'Albert Sans',sans-serif;font-weight:600;white-space:normal;max-width:200px}

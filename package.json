@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "fetch:sheet": "node scripts/fetch-sheet.mjs",
     "build": "vite build",
+    "build:static": "node scripts/fetch-sheet.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
