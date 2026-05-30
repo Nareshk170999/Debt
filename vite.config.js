@@ -21,7 +21,7 @@ function sheetProxy() {
             return res.end(JSON.stringify({ error: 'Missing spreadsheet id' }))
           }
           const target = `https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`
-          const upstream = await fetch(target, { redirect: 'follow' })
+          const upstream = await fetch(target, { redirect: 'follow', cache: 'no-store' })
           if (!upstream.ok) {
             res.statusCode = upstream.status
             return res.end(JSON.stringify({

@@ -78,8 +78,25 @@ npm run build:static   # downloads the sheet, then builds into dist/
 npm run preview
 ```
 
+## 4. Realtime data on the hosted site (optional)
+
+By default the hosted site shows the `data.xlsx` snapshot, which only updates
+when the Action rebuilds (on push / every ~15 min / manual run). To make the
+**Refresh button pull live data** like local does, add a tiny free proxy —
+GitHub Pages is static, so the live Google fetch must happen somewhere with a
+server. A **Cloudflare Worker** (free, no card) is the simplest:
+
+1. https://dash.cloudflare.com → **Workers & Pages → Create → Worker**.
+2. Paste [`cloudflare-worker.js`](cloudflare-worker.js), click **Deploy**.
+3. Copy the URL, e.g. `https://sheet-proxy.<you>.workers.dev`.
+4. Add it as a GitHub **Actions variable** `VITE_PROXY_URL` (Settings → Secrets
+   and variables → Actions → Variables), then re-run the workflow.
+
+Now production fetches the sheet live through the Worker on every refresh; the
+snapshot stays as an automatic fallback if the Worker is ever unreachable.
+
 ## Notes
-- Set `VITE_REFRESH_SECONDS` in `.env` for auto-refresh.
-- Data source: in **dev** the Vite middleware proxies Google live; in
-  **production** the app loads the `data.xlsx` baked by the Action. Both avoid
-  the browser CORS block by fetching server-side.
+- Set `VITE_REFRESH_SECONDS` in `.env` (or the Actions variable) for auto-refresh.
+- Data source: **dev** → Vite middleware proxies Google live; **prod** →
+  `VITE_PROXY_URL` (live) if set, else the `data.xlsx` snapshot. All paths fetch
+  server-side to avoid the browser CORS block.

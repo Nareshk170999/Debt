@@ -16,10 +16,17 @@ const env = import.meta.env
 
 export const SHEET_URL =
   env.VITE_SHEET_URL ||
-  "https://docs.google.com/spreadsheets/d/1kwj35wMPCAhRjK7q07iFEr8WtnGaMDF2/edit?usp=sharing"
+  "https://docs.google.com/spreadsheets/d/1I1itIjufqZUNzjqWEzkkwVaX3YLWUhCUojn9AgGF_r4/edit?usp=sharing"
 
-// Title shown in the dashboard header
-export const DASHBOARD_TITLE = env.VITE_DASHBOARD_TITLE || "Data Dashboard"
+// Title shown in the dashboard header.
+// Change this default to rename it everywhere (local + hosted), or override per
+// environment with VITE_DASHBOARD_TITLE (.env locally / Actions variable on CI).
+export const DASHBOARD_TITLE = env.VITE_DASHBOARD_TITLE || "Debt Freedom Plan"
 
 // Auto-refresh interval in seconds (0 = off)
 export const REFRESH_SECONDS = Number(env.VITE_REFRESH_SECONDS) || 0
+
+// Optional realtime proxy URL (Cloudflare Worker) for live data on a static
+// host. When set, the production site fetches the sheet live instead of the
+// build-time snapshot. Leave empty to use the snapshot. See cloudflare-worker.js
+export const PROXY_URL = env.VITE_PROXY_URL || ""

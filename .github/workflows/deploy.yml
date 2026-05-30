@@ -5,7 +5,7 @@ on:
     branches: [main]
   workflow_dispatch:          # lets you redeploy on demand from the Actions tab
   schedule:
-    - cron: '0 * * * *'       # refresh the sheet data hourly
+    - cron: '*/15 * * * *'    # refresh the snapshot every ~15 min (best-effort)
 
 permissions:
   contents: read
@@ -36,6 +36,7 @@ jobs:
           VITE_SHEET_URL: ${{ vars.VITE_SHEET_URL }}
           VITE_DASHBOARD_TITLE: ${{ vars.VITE_DASHBOARD_TITLE }}
           VITE_REFRESH_SECONDS: ${{ vars.VITE_REFRESH_SECONDS }}
+          VITE_PROXY_URL: ${{ vars.VITE_PROXY_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

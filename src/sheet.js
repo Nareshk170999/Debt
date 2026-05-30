@@ -9,30 +9,56 @@ export function extractId(url) {
   return m ? m[1] : null
 }
 
-// Fetch the workbook and return raw rows per sheet.
-//   • dev      → through the Vite dev-server proxy (live, server-side fetch)
-//   • prod     → a static data.xlsx baked at build time by the GitHub Action
-//                (GitHub Pages has no server, so the CORS-bound Google fetch
-//                 happens in CI instead of the browser)
-export async function fetchWorkbook(url) {
-  let res
-  if (import.meta.env.DEV) {
-    const id = extractId(url)
-    if (!id) throw new Error('Could not find a spreadsheet id in that URL.')
-    res = await fetch(`/api/sheet?id=${encodeURIComponent(id)}`)
-  } else {
-    res = await fetch(`${import.meta.env.BASE_URL}data.xlsx`, { cache: 'no-store' })
-  }
-  if (!res.ok) {
-    let msg = `Request failed (${res.status}).`
-    try { const j = await res.json(); if (j.error) msg = j.error } catch {}
-    if (!import.meta.env.DEV && res.status === 404)
-      msg = 'data.xlsx not found — the GitHub Action needs to run to bake the sheet into the site.'
-    throw new Error(msg)
-  }
-  const buf = await res.arrayBuffer()
-  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true })
+// Optional realtime proxy (e.g. a free Cloudflare Worker) that mirrors the dev
+// /api/sheet endpoint: GET <PROXY_URL>?id=<sheetId> -> the live .xlsx bytes
+// with permissive CORS. Set VITE_PROXY_URL to enable live refresh on a static
+// host like GitHub Pages. See cloudflare-worker.js + README.
+const PROXY_URL = import.meta.env?.VITE_PROXY_URL || ''
 
+// Fetch the workbook and return raw rows per sheet.
+//   • dev               → Vite dev-server proxy (live)
+//   • prod + PROXY_URL   → LIVE from Google via your proxy (real-time refresh)
+//   • prod (no proxy)    → the build-time data.xlsx snapshot
+// The snapshot is always the automatic fallback if a live fetch fails.
+export async function fetchWorkbook(url) {
+  const id = extractId(url)
+  const bust = `_=${Date.now()}`   // defeat caching on every refresh
+
+  if (import.meta.env.DEV) {
+    if (!id) throw new Error('Could not find a spreadsheet id in that URL.')
+    const r = await fetch(`/api/sheet?id=${encodeURIComponent(id)}&${bust}`, { cache: 'no-store' })
+    if (!r.ok) throw new Error(await errMsg(r))
+    return parseWorkbook(await r.arrayBuffer())
+  }
+
+  // production: live via configured proxy, else fall back to the baked snapshot
+  if (PROXY_URL && id) {
+    try {
+      const sep = PROXY_URL.includes('?') ? '&' : '?'
+      const r = await fetch(`${PROXY_URL}${sep}id=${encodeURIComponent(id)}&${bust}`, { cache: 'no-store' })
+      if (r.ok) {
+        const buf = await r.arrayBuffer()
+        if (buf.byteLength > 0) return parseWorkbook(buf)
+      }
+    } catch { /* fall through to snapshot */ }
+  }
+  const r = await fetch(`${import.meta.env.BASE_URL}data.xlsx?${bust}`, { cache: 'no-store' })
+  if (!r.ok) {
+    throw new Error(r.status === 404
+      ? 'No data.xlsx snapshot found — run the GitHub Action (or set VITE_PROXY_URL for live data).'
+      : await errMsg(r))
+  }
+  return parseWorkbook(await r.arrayBuffer())
+}
+
+async function errMsg(res) {
+  let msg = `Request failed (${res.status}).`
+  try { const j = await res.json(); if (j.error) msg = j.error } catch {}
+  return msg
+}
+
+function parseWorkbook(buf) {
+  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true })
   return wb.SheetNames.map(name => ({
     name,
     aoa: XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '', blankrows: false })
@@ -127,13 +153,14 @@ export function buildModel(sheets) {
   const expenses = parseExpenses(sheets)
   const goldLoans = parseGold(goldSheet?.aoa || [])
 
-  // header / income / as-of text from the Loans sheet
+  // income breakdown table (Income Source / Amount, ending in Total Income)
   const aoa = loansSheet?.aoa || []
-  const incomeLine = (aoa.find(r => /combined income/i.test(String(r[0]))) || [])[0] || ''
-  const sheetAsOf = (clean(incomeLine).match(/as of\s+([^|]+)$/i) || [])[1]?.trim() || ''
-
-  let baseIncome = num((clean(incomeLine).match(/₹\s*([\d,]+)\s*\/?\s*month/i) || [])[1])
-  if (!isFinite(baseIncome) && monthly.length) baseIncome = monthly[0].income
+  const income = parseIncome(aoa)
+  let baseIncome = isFinite(income.total) ? income.total
+    : (monthly.length ? monthly[0].income : NaN)
+  const subtitle = income.people.length
+    ? `Income ${fmtINR(income.total)}/mo · ${income.people.map(p => `${p.name} ${fmtINR(p.amount)}`).join(' + ')}`
+    : (isFinite(baseIncome) ? `Income ${fmtINR(baseIncome)}/mo` : '')
 
   // closure events extracted from the Monthly View "Events" column
   const events = []
@@ -146,10 +173,28 @@ export function buildModel(sheets) {
   const months = monthly.map(m => ({ key: m.key, label: m.month }))
 
   return {
-    subtitle: clean(incomeLine),
-    sheetAsOf, baseIncome,
-    loans, monthly, months, events, expenses, goldLoans,
+    subtitle, sheetAsOf: '', baseIncome,
+    income, loans, monthly, months, events, expenses, goldLoans,
   }
+}
+
+// Income breakdown table: rows between an "Income Source" header and the
+// "Loan Name" header / "Total Income" row.
+function parseIncome(aoa) {
+  const h = aoa.findIndex(r => /income source/i.test(String(r[0])))
+  if (h < 0) return { people: [], total: NaN }
+  const people = []
+  let total = NaN
+  for (let i = h + 1; i < aoa.length; i++) {
+    const name = clean(aoa[i][0])
+    const amt = num(aoa[i][1])
+    if (/loan name/i.test(name)) break
+    if (!name) continue
+    if (/^total/i.test(name)) { total = amt; break }
+    if (isFinite(amt)) people.push({ name, amount: amt })
+  }
+  if (!isFinite(total)) total = people.reduce((a, b) => a + b.amount, 0)
+  return { people, total }
 }
 
 function parseLoans(aoa) {
